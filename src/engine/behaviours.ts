@@ -17,6 +17,11 @@ const HOP_TIME = 0.36;
 const SEEN_BEFORE_SPECIAL = 0.8;
 const REST_BETWEEN_SPECIALS = 7;
 const SPECIALS_PER_RIDE = 3;
+/**
+ * With auto focus the view turns to a dinosaur from this much further off than it has to be for its special, so
+ * the view is already on it, well before the special begins.
+ */
+const LOOK_AHEAD = 25;
 const scratch = new THREE.Vector3();
 
 type State = 'away' | 'entering' | 'idle' | 'special' | 'toFruit' | 'eating' | 'returning' | 'drum';
@@ -100,6 +105,20 @@ export class Actor {
 
   get position() {
     return this.puppet.group.position;
+  }
+
+  /** How near the camera has to be for it to be made out. */
+  private get reach() {
+    return 26 + this.info.height * 2.5;
+  }
+
+  get lookFrom() {
+    return this.reach + LOOK_AHEAD;
+  }
+
+  /** In sight, or hiding until it is looked at (the view is drawn to its hiding place). */
+  get worthALook() {
+    return this.visible || (this.state === 'away' && this.spawn.hiddenUntil === 'special');
   }
 
   /** The middle of the dinosaur: where the ride's view is drawn to. */
@@ -197,8 +216,7 @@ export class Actor {
 
   /** Whether it is comfortably inside the view and near enough to make out. */
   private onScreen(stage: Stage): boolean {
-    const reach = 26 + this.info.height * 2.5;
-    if (this.position.distanceTo(stage.camera.position) > reach) return false;
+    if (this.position.distanceTo(stage.camera.position) > this.reach) return false;
     const p = this.centre(scratch).project(stage.camera);
     return p.z < 1 && Math.abs(p.x) < 0.8 && Math.abs(p.y) < 0.9;
   }

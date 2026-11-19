@@ -1,6 +1,7 @@
 // The ride: the camera moves along the track by itself, facing the way it is going. The player can look anywhere
-// and zoom, and the view never moves on its own: wherever he has turned it, it stays turned by that much from
-// the track, so a shot can be lined up ahead of time.
+// and zoom, and normally the view never moves on its own: wherever he has turned it, it stays turned by that much
+// from the track, so a shot can be lined up ahead of time. With auto focus on, the view turns by itself to the
+// next dinosaur, and follows it past, whenever he is not turning it himself.
 
 import * as THREE from 'three';
 import { level, railPoints, smooth } from '../data/level';
@@ -11,6 +12,11 @@ const CRAWL = 1.8; // metres a second through a scene
 const BESIDE_A_DINO = 0.55;
 /** Slow mode takes this much off every speed. */
 const SLOW_MODE = 0.7;
+/** With auto focus the view goes to a dinosaur that is no further round to the side than this, and stays with one it is on a little further. */
+const PICK_UP = THREE.MathUtils.degToRad(100);
+const LET_GO = THREE.MathUtils.degToRad(115);
+/** It leaves the view alone for this long after he last turned it, then takes it back gently. */
+const HANDS_OFF = 1.5;
 /** Straight up and straight down are the only places the view cannot go. */
 const LOOK_PITCH = THREE.MathUtils.degToRad(80);
 const BASE_FOV = 45;
@@ -21,6 +27,10 @@ const wrap = (angle: number) => Math.atan2(Math.sin(angle), Math.cos(angle));
 
 export interface LookTarget {
   readonly visible: boolean;
+  /** There to be looked at: in sight, or hiding until it is looked at. */
+  readonly worthALook: boolean;
+  /** With auto focus the view turns to it from this many metres away. */
+  readonly lookFrom: number;
   /** A point worth looking at, such as the middle of a dinosaur. */
   centre(out: THREE.Vector3): THREE.Vector3;
 }
@@ -42,6 +52,11 @@ export class Ride {
   zoom = 1;
   /** Slow mode: everything a good deal slower. */
   slow = false;
+  /** Auto focus: the view finds the dinosaurs by itself. */
+  autoFocus = false;
+  /** Seconds since he last turned the view, and the dinosaur the view is following. */
+  private idle = Infinity;
+  private watching: LookTarget | undefined;
   private readonly here = new THREE.Vector3();
   private readonly ahead = new THREE.Vector3();
   private readonly spot = new THREE.Vector3();
@@ -61,12 +76,47 @@ export class Ride {
     this.settled = false;
     this.zoom = 1;
     this.lookYaw = this.lookPitch = 0;
+    this.idle = Infinity;
+    this.watching = undefined;
   }
 
   /** The player turns the view: `right`, `up` in radians. */
   turn(right: number, up: number) {
     this.lookYaw = wrap(this.lookYaw - right);
     this.lookPitch = THREE.MathUtils.clamp(this.lookPitch + up, -LOOK_PITCH, LOOK_PITCH);
+    this.idle = 0;
+  }
+
+  /**
+   * Auto focus: turns the view towards the nearest dinosaur that is ahead or alongside, and keeps it there as
+   * the ride goes by. With none about, the view goes back to straight down the track.
+   */
+  private follow(dt: number, targets: LookTarget[]) {
+    this.idle += dt;
+    let best: LookTarget | undefined;
+    let nearest = Infinity;
+    let wantYaw = 0;
+    let wantPitch = 0;
+    for (const target of targets) {
+      if (!target.worthALook) continue;
+      const to = target.centre(this.spot).sub(this.here);
+      const distance = to.length();
+      if (distance > target.lookFrom) continue;
+      const kept = target === this.watching;
+      const yaw = wrap(Math.atan2(-to.x, -to.z) - this.yaw);
+      if (Math.abs(yaw) > (kept ? LET_GO : PICK_UP)) continue;
+      // the one being followed is not dropped for another that is only a little nearer
+      const rank = distance - (kept ? 4 : 0);
+      if (rank >= nearest) continue;
+      nearest = rank;
+      best = target;
+      wantYaw = yaw;
+      wantPitch = THREE.MathUtils.clamp(Math.atan2(to.y, Math.hypot(to.x, to.z)) - this.pitch, -LOOK_PITCH, LOOK_PITCH);
+    }
+    this.watching = best;
+    const ease = (1 - Math.exp(-dt * 2.2)) * smooth(HANDS_OFF, HANDS_OFF + 1, this.idle);
+    this.lookYaw = wrap(this.lookYaw + wrap(wantYaw - this.lookYaw) * ease);
+    this.lookPitch += (wantPitch - this.lookPitch) * ease;
   }
 
   /** Zooms by a factor: more than 1 closer, less than 1 wider. */
@@ -95,6 +145,7 @@ export class Ride {
     const ease = 1 - Math.exp(-dt * 2.5);
     this.yaw += wrap(trackYaw - this.yaw) * ease;
     this.pitch += (trackPitch - this.pitch) * ease;
+    if (this.autoFocus && !this.parked) this.follow(dt, targets);
     camera.position.copy(this.here);
     // a mine cart rattles: a small, quick bob on the rails
     if (level.cart && !this.parked) camera.position.y += Math.sin(this.s * 2.6) * 0.018 + Math.sin(this.s * 7.1) * 0.008;

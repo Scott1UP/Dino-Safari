@@ -33,6 +33,7 @@ const FPS_KEY = 'dino-safari:fps-viewer';
 const RIDES_KEY = 'dino-safari:rides';
 const LEVEL_KEY = 'dino-safari:level';
 const SLOW_KEY = 'dino-safari:slow-ride';
+const AUTO_FOCUS_KEY = 'dino-safari:auto-focus';
 
 type Mode = 'title' | 'ride' | 'paused' | 'away';
 let mode: Mode = 'title';
@@ -58,6 +59,7 @@ let ambient: Ambient;
 let interactions: Interactions;
 let ride: Ride;
 let slowRide = localStorage.getItem(SLOW_KEY) === '1';
+let autoFocus = localStorage.getItem(AUTO_FOCUS_KEY) === '1';
 
 async function enterLevel(def: LevelDef) {
   // let go of the level being left
@@ -90,6 +92,7 @@ async function enterLevel(def: LevelDef) {
   interactions = await Interactions.create(scene, actors);
   ride = new Ride();
   ride.slow = slowRide;
+  ride.autoFocus = autoFocus;
   ride.parked = true;
   setGraphics(graphics);
 }
@@ -265,6 +268,11 @@ async function pause() {
     setSlowRide(on) {
       slowRide = ride.slow = on;
       localStorage.setItem(SLOW_KEY, on ? '1' : '0');
+    },
+    autoFocus: () => autoFocus,
+    setAutoFocus(on) {
+      autoFocus = ride.autoFocus = on;
+      localStorage.setItem(AUTO_FOCUS_KEY, on ? '1' : '0');
     },
     graphics: () => graphics,
     setGraphics,

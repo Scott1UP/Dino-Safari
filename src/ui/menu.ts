@@ -1,6 +1,6 @@
 // The pause and settings menu: one tap opens it. There is nothing in here a child could break.
 
-import { Check, Gauge, House, Music, Play, Sparkles, Turtle, Volume2, VolumeX } from 'lucide';
+import { ArrowLeft, Check, Focus, Gamepad2, Gauge, House, Music, Play, Sparkles, Turtle, Volume2, VolumeX } from 'lucide';
 import { musicOn, muted, setMusicOn, setMuted, sound } from '../audio';
 import { $, button, el, icon } from './dom';
 
@@ -11,6 +11,8 @@ export type MenuChoice = 'resume' | 'home';
 export interface MenuSettings {
   slowRide(): boolean;
   setSlowRide(on: boolean): void;
+  autoFocus(): boolean;
+  setAutoFocus(on: boolean): void;
   graphics(): Graphics;
   setGraphics(level: Graphics): void;
   fpsViewer(): boolean;
@@ -21,7 +23,10 @@ export type Graphics = 'high' | 'medium' | 'low';
 const GRAPHICS: Graphics[] = ['high', 'medium', 'low'];
 const GRAPHICS_NAME = { high: 'High', medium: 'Medium', low: 'Low' };
 
-/** Opens the menu and resolves with what was chosen. During a ride it is the pause menu, with a way home. */
+/**
+ * Opens the menu and resolves with what was chosen. During a ride it is the pause menu, with a way home.
+ * How the game plays (the ride's pace, the view's help) is a page of its own, behind the Gameplay button.
+ */
 export function openMenu(riding: boolean, settings: MenuSettings): Promise<MenuChoice> {
   return new Promise((resolve) => {
     const close = (choice: MenuChoice) => {
@@ -47,9 +52,22 @@ export function openMenu(riding: boolean, settings: MenuSettings): Promise<MenuC
     const switches = [
       toggle('Sound', () => !muted, () => setMuted(!muted)),
       toggle('Music', () => musicOn, () => setMusicOn(!musicOn), Music, Music),
-      // slow ride: the whole ride at a gentler pace
-      toggle('Slow ride', settings.slowRide, () => settings.setSlowRide(!settings.slowRide()), Turtle, Turtle),
+      button('btn-plain', Gamepad2, 'Gameplay', () => {
+        sound('tap');
+        root.replaceChildren(gameplay());
+      }),
     ];
+    const gameplay = () =>
+      el('div', 'panel menu',
+        el('h2', 'heading small', 'Gameplay'),
+        // slow ride: the whole ride at a gentler pace
+        toggle('Slow ride', settings.slowRide, () => settings.setSlowRide(!settings.slowRide()), Turtle, Turtle),
+        // auto focus: the view turns to the dinosaurs by itself
+        toggle('Auto focus', settings.autoFocus, () => settings.setAutoFocus(!settings.autoFocus()), Focus, Focus),
+        button('btn-go', ArrowLeft, 'Back', () => {
+          sound('tap');
+          root.replaceChildren(panel);
+        }));
     // graphics: each press moves on to the next of high, medium and low
     const graphics = button('btn-plain', undefined, '');
     const drawGraphics = () => graphics.replaceChildren(icon(Sparkles), `Graphics: ${GRAPHICS_NAME[settings.graphics()]}`);
