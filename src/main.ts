@@ -283,9 +283,10 @@ async function pause() {
 let lastZoomSound = 0;
 setupHud({
   look(dx, dy, viewHeight) {
-    // the scene follows the finger exactly, however far the lens is zoomed
+    // the view turns the way the finger goes (swipe up to look up, right to look right), by as much as the
+    // finger crosses of the screen, however far the lens is zoomed
     const step = THREE.MathUtils.degToRad(camera.fov) / viewHeight;
-    ride.drag(dx * step, dy * step);
+    ride.turn(dx * step, -dy * step);
   },
   zoom(factor) {
     const before = ride.zoom;

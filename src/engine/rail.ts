@@ -63,10 +63,10 @@ export class Ride {
     this.lookYaw = this.lookPitch = 0;
   }
 
-  /** The player drags the scene: `dx`, `dy` in radians of view. Dragging right pulls the scene right, so the camera turns left. */
-  drag(dx: number, dy: number) {
-    this.lookYaw = wrap(this.lookYaw + dx);
-    this.lookPitch = THREE.MathUtils.clamp(this.lookPitch + dy, -LOOK_PITCH, LOOK_PITCH);
+  /** The player turns the view: `right`, `up` in radians. */
+  turn(right: number, up: number) {
+    this.lookYaw = wrap(this.lookYaw - right);
+    this.lookPitch = THREE.MathUtils.clamp(this.lookPitch + up, -LOOK_PITCH, LOOK_PITCH);
   }
 
   /** Zooms by a factor: more than 1 closer, less than 1 wider. */
