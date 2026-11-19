@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Dino Safari" />
+    <meta name="theme-color" content="#2f7a3a" />
+    <title>Dino Safari</title>
+    <meta
+      name="description"
+      content="Ride through a paper-diorama world, photograph the dinosaurs and fill each level's binder with your own photos."
+    />
+    <link rel="icon" href="./favicon.ico" sizes="48x48" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+
+    <!-- Link previews. %SITE_URL% is filled in by the build (see vite.config.ts), because
+         these have to be full addresses. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Dino Safari" />
+    <meta property="og:title" content="Dino Safari" />
+    <meta
+      property="og:description"
+      content="Ride through a paper-diorama world, photograph the dinosaurs and fill each level's binder with your own photos."
+    />
+    <meta property="og:url" content="%SITE_URL%/" />
+    <meta property="og:image" content="%SITE_URL%/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The Dino Safari logo over pictures of the Jungle Trail and the Volcano Mine." />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <!-- the view fills the whole screen; a photo is the same shape as the screen it was taken on -->
+    <div id="frame">
+      <canvas id="view"></canvas>
+      <div id="lens"></div>
+      <div id="reticle"><i></i><i></i><i></i><i></i></div>
+      <div id="flash"></div>
+      <div id="fade"></div>
+    </div>
+
+    <div id="hud" hidden>
+      <button id="peek-binder" class="btn btn-square btn-alt" type="button" aria-label="Look in the binder"><i data-lucide="book-open"></i></button>
+      <button id="pause" class="btn btn-square" type="button" aria-label="Pause"><i data-lucide="pause"></i></button>
+      <div id="zoom"><i data-lucide="zoom-in"></i><b>1.0×</b></div>
+      <div id="fps" hidden></div>
+      <div id="photo"><img alt="" /></div>
+      <button id="drum" class="orb" type="button" aria-label="Bang the drum"><img src="art/ui/drum.webp" alt="" draggable="false" /></button>
+      <button id="fruit" class="orb" type="button" aria-label="Throw fruit"><img src="art/ui/fruit.webp" alt="" draggable="false" /></button>
+      <button id="zoom-out" class="orb small" type="button" aria-label="Zoom out"><i data-lucide="zoom-out"></i></button>
+      <button id="zoom-in" class="orb small" type="button" aria-label="Zoom in"><i data-lucide="zoom-in"></i></button>
+      <button id="shutter" class="orb" type="button" aria-label="Take a photo"><i data-lucide="camera"></i></button>
+    </div>
+    <img id="ghost" src="art/ui/fruit.webp" alt="" hidden />
+
+    <section id="title" class="screen" hidden>
+      <button id="settings" class="btn btn-square" type="button" aria-label="Settings"><i data-lucide="settings"></i></button>
+      <img class="logo" src="art/ui/logo.webp" alt="Dino Safari" draggable="false" />
+      <div class="row">
+        <button id="open-binder" class="btn btn-alt" type="button"><i data-lucide="book-open"></i>Collection</button>
+        <button id="play" class="btn btn-go btn-huge" type="button"><i data-lucide="play"></i>Play</button>
+      </div>
+    </section>
+
+    <section id="review" class="screen sunny" hidden></section>
+    <section id="binder" hidden></section>
+    <section id="menu" class="overlay" hidden></section>
+    <div id="loading"><span></span></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

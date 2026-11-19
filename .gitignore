@@ -1,0 +1,19 @@
+node_modules
+dist
+.DS_Store
+
+# local secrets (API keys)
+.env
+.env.*
+
+# reference images and videos (third-party art, local only)
+references/
+
+# raw image-model output (local only; re-pack with `npm run art -- pack`)
+art/raw/
+
+# contact sheets for reviewing generated art (local only)
+art/review/
+
+# voice and sound samples for review (local only)
+audio-review/

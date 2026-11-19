@@ -1,0 +1,1584 @@
+/* The same chunky, toy-like look as Dino Kart: ink outlines, cream panels, buttons with a thick lower edge. */
+:root {
+  /* Outlines scale with the screen's shorter side, so they are not chunky on a phone:
+     the button outline is 5px on a tablet and thins to 3px on a small phone. */
+  --stroke: clamp(3px, 0.75vmin, 5px);
+  --ink: #3b2414;
+  --cream: #fff7e3;
+  --cream-2: #ffe9bd;
+  --go: #6fd03c;
+  --go-dark: #3f9a1d;
+  --sun: #ffb21f;
+  --sun-dark: #d97a00;
+  --sky: #3bb4f6;
+  --sky-dark: #1a84c9;
+  --red: #f4543a;
+  --red-dark: #bf2f1b;
+  --yellow: #ffc21f;
+  --font: 'Fredoka', ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #1d4a2b;
+  font-family: var(--font);
+  color: var(--ink);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* No part of the page pans or pinch-zooms in the browser: the game handles every touch itself.
+   (Pinching the scene zooms the camera; that is done in the HUD.) */
+*,
+*::before,
+*::after {
+  touch-action: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+button:focus-visible {
+  outline: 5px solid #fff;
+  outline-offset: 4px;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+/* ───────── the view: it fills the whole screen ───────── */
+#frame {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+#view {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#flash,
+#fade,
+#lens {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#flash {
+  background: #fff;
+}
+
+#flash.go {
+  animation: flash 320ms ease-out;
+}
+
+@keyframes flash {
+  from { opacity: 0.85; }
+  to { opacity: 0; }
+}
+
+#fade {
+  background: #1d4a2b;
+  transition: opacity 500ms ease;
+}
+
+#fade.on {
+  opacity: 1;
+}
+
+/* zooming in closes a soft dark ring round the view, like looking down a lens */
+#lens {
+  --zoomed: 0;
+  opacity: var(--zoomed);
+  background: radial-gradient(ellipse at center, transparent 46%, rgb(20 30 22 / 0.3) 70%, rgb(10 18 12 / 0.75) 100%);
+  transition: opacity 200ms ease-out;
+}
+
+/* where the camera is aimed: four corners round the middle of the view, which close in as the lens zooms */
+#reticle {
+  --tight: 1;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24vmin;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) scale(var(--tight));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms ease, transform 160ms var(--ease-out);
+  filter: drop-shadow(0 2px 0 rgb(40 20 5 / 0.55));
+}
+
+body.riding #reticle {
+  opacity: 0.95;
+}
+
+#reticle i {
+  position: absolute;
+  width: 24%;
+  height: 24%;
+  border: 0 solid #fff;
+}
+
+#reticle i:nth-child(1) { left: 0; top: 0; border-width: var(--stroke) 0 0 var(--stroke); border-radius: 10px 0 0 0; }
+#reticle i:nth-child(2) { right: 0; top: 0; border-width: var(--stroke) var(--stroke) 0 0; border-radius: 0 10px 0 0; }
+#reticle i:nth-child(3) { left: 0; bottom: 0; border-width: 0 0 var(--stroke) var(--stroke); border-radius: 0 0 0 10px; }
+#reticle i:nth-child(4) { right: 0; bottom: 0; border-width: 0 var(--stroke) var(--stroke) 0; border-radius: 0 0 10px 0; }
+
+#reticle.snap {
+  animation: snap 260ms var(--ease-out);
+}
+
+@keyframes snap {
+  40% { transform: translate(-50%, -50%) scale(calc(var(--tight) * 0.8)); }
+}
+
+/* ───────── buttons ───────── */
+.btn {
+  --face: var(--cream);
+  --edge: #e2c489;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 0 30px 4px;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  background: var(--face);
+  border: var(--stroke) solid var(--ink);
+  border-radius: 26px;
+  box-shadow:
+    inset 0 -9px 0 var(--edge),
+    inset 0 5px 0 rgb(255 255 255 / 0.4),
+    0 7px 0 rgb(40 20 5 / 0.9);
+  transition:
+    transform 0.12s var(--ease-out),
+    box-shadow 0.12s var(--ease-out);
+}
+
+.btn:active {
+  transform: translateY(5px) scale(0.98);
+  box-shadow:
+    inset 0 -5px 0 var(--edge),
+    inset 0 5px 0 rgb(255 255 255 / 0.4),
+    0 2px 0 rgb(40 20 5 / 0.9);
+}
+
+.btn svg {
+  width: 1.15em;
+  height: 1.15em;
+  stroke-width: 2.8;
+  flex: none;
+}
+
+.btn-go,
+.btn-alt,
+.btn-plain {
+  color: #fff;
+  text-shadow: 0 2px 0 rgb(0 0 0 / 0.22);
+}
+
+.btn-go { --face: var(--go); --edge: var(--go-dark); }
+.btn-alt { --face: var(--sun); --edge: var(--sun-dark); }
+.btn-plain { --face: var(--sky); --edge: var(--sky-dark); }
+.btn-plain.off { --face: #b9c3c9; --edge: #8f9aa1; }
+
+.btn svg.solid,
+.btn svg.lucide-play {
+  fill: currentColor;
+}
+
+.btn-huge {
+  min-height: clamp(84px, 16vmin, 124px);
+  padding: 0 clamp(40px, 8vmin, 76px) 6px;
+  font-size: clamp(40px, 8vmin, 64px);
+  border-width: calc(var(--stroke) * 1.4);
+  border-radius: 40px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% { scale: 1.06; }
+}
+
+.btn-square {
+  width: 64px;
+  min-height: 64px;
+  height: 64px;
+  padding: 0 0 4px;
+  border-radius: 20px;
+  font-size: 30px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 3vw, 32px);
+}
+
+.heading {
+  margin: 0;
+  font-size: clamp(34px, 8vmin, 68px);
+  font-weight: 700;
+  line-height: 1.05;
+  color: #fff;
+  -webkit-text-stroke: clamp(5px, 1.5vmin, 12px) var(--ink);
+  paint-order: stroke fill;
+  filter: drop-shadow(0 5px 0 rgb(40 20 5 / 0.9));
+}
+
+.heading.small {
+  font-size: clamp(30px, 6vmin, 46px);
+  color: var(--yellow);
+  -webkit-text-stroke-width: clamp(4px, 1.1vmin, 8px);
+}
+
+/* ───────── ride controls: big round buttons in the bottom corners ───────── */
+.orb {
+  --face: var(--cream);
+  --edge: #e2c489;
+  position: fixed;
+  display: grid;
+  place-items: center;
+  width: var(--size);
+  height: var(--size);
+  border: calc(var(--stroke) * 1.2) solid var(--ink);
+  border-radius: 50%;
+  background: var(--face);
+  box-shadow:
+    inset 0 -10px 0 var(--edge),
+    inset 0 6px 0 rgb(255 255 255 / 0.4),
+    0 8px 0 rgb(40 20 5 / 0.9);
+  touch-action: none;
+  transition:
+    transform 0.12s var(--ease-out),
+    box-shadow 0.12s var(--ease-out),
+    filter 0.2s ease;
+}
+
+.orb:active,
+.orb.down {
+  transform: translateY(6px) scale(0.97);
+  box-shadow:
+    inset 0 -5px 0 var(--edge),
+    inset 0 6px 0 rgb(255 255 255 / 0.4),
+    0 2px 0 rgb(40 20 5 / 0.9);
+}
+
+.orb.resting {
+  filter: grayscale(0.85) brightness(0.82);
+}
+
+.orb.pulse {
+  animation: orb-pulse 700ms ease-in-out 6;
+}
+
+@keyframes orb-pulse {
+  50% { scale: 1.2; box-shadow: inset 0 -10px 0 var(--edge), 0 8px 0 rgb(40 20 5 / 0.9), 0 0 0 14px rgb(255 255 255 / 0.6); }
+}
+
+.orb img {
+  width: 70%;
+  height: 70%;
+  margin-bottom: 6%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+#shutter {
+  --size: clamp(104px, 23vmin, 150px);
+  --face: var(--red);
+  --edge: var(--red-dark);
+  right: calc(22px + env(safe-area-inset-right));
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  color: #fff;
+}
+
+#shutter svg {
+  width: 54%;
+  height: 54%;
+  margin-bottom: 6%;
+  stroke-width: 2.4;
+  filter: drop-shadow(0 3px 0 rgb(0 0 0 / 0.22));
+}
+
+/* zoom in and out sit just above the shutter, for playing with the buttons alone */
+.orb.small {
+  --size: clamp(54px, 11vmin, 72px);
+  border-width: var(--stroke);
+  bottom: calc(24px + env(safe-area-inset-bottom) + clamp(104px, 23vmin, 150px) + 22px);
+  box-shadow:
+    inset 0 -7px 0 var(--edge),
+    inset 0 5px 0 rgb(255 255 255 / 0.4),
+    0 6px 0 rgb(40 20 5 / 0.9);
+}
+
+.orb.small svg {
+  width: 56%;
+  height: 56%;
+  margin-bottom: 8%;
+  stroke-width: 2.8;
+}
+
+#zoom-in {
+  right: calc(22px + env(safe-area-inset-right));
+}
+
+#zoom-out {
+  right: calc(22px + env(safe-area-inset-right) + clamp(54px, 11vmin, 72px) + 12px);
+}
+
+#fruit,
+#drum {
+  --size: clamp(78px, 17vmin, 108px);
+  bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+#fruit {
+  left: calc(22px + env(safe-area-inset-left));
+}
+
+#drum {
+  left: calc(22px + env(safe-area-inset-left) + clamp(78px, 17vmin, 108px) + 18px);
+}
+
+#ghost {
+  position: fixed;
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  margin: -42px 0 0 -42px;
+  pointer-events: none;
+  z-index: 5;
+  filter: drop-shadow(0 6px 0 rgb(40 20 5 / 0.35));
+}
+
+#pause {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top));
+  right: calc(14px + env(safe-area-inset-right));
+}
+
+/* the FPS viewer: a small frame-rate counter, switched on in the settings */
+#fps {
+  position: fixed;
+  top: calc(18px + env(safe-area-inset-top));
+  right: calc(14px + env(safe-area-inset-right) + 64px + 12px);
+  padding: 3px 12px 5px;
+  border: calc(var(--stroke) * 0.6) solid var(--ink);
+  border-radius: 999px;
+  background: var(--cream);
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* how far the lens is zoomed: shows while zooming and for a moment after */
+#zoom {
+  position: fixed;
+  left: 50%;
+  top: calc(16px + env(safe-area-inset-top));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 18px 8px;
+  border: calc(var(--stroke) * 0.8) solid var(--ink);
+  border-radius: 999px;
+  background: var(--cream);
+  box-shadow: inset 0 -5px 0 #e2c489, 0 5px 0 rgb(40 20 5 / 0.9);
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transform: translate(-50%, -140%);
+  transition: opacity 0.2s ease, transform 0.3s var(--pop);
+  pointer-events: none;
+}
+
+#zoom.on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+#zoom svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 3;
+}
+
+/* ───────── prints: a photo with a white border, at the photo's own shape ───────── */
+.print {
+  flex: none;
+  padding: calc(var(--w) * 0.035);
+  background: #fff;
+  border-radius: calc(var(--w) * 0.02);
+  width: var(--w);
+}
+
+.print img {
+  display: block;
+  width: 100%;
+  aspect-ratio: var(--ar);
+  border-radius: calc(var(--w) * 0.008);
+  background: #d8d2c4;
+}
+
+.shot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stars {
+  display: flex;
+  justify-content: center;
+  gap: 6%;
+}
+
+.stars svg {
+  fill: #fff;
+  stroke: var(--ink);
+  stroke-width: 2.6;
+}
+
+.stars svg.lit {
+  fill: var(--yellow);
+  animation: star-in 380ms var(--pop) backwards;
+}
+
+@keyframes star-in {
+  from { transform: scale(0) rotate(-40deg); }
+}
+
+/* the little preview of the photo just taken */
+#peek-binder {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top));
+  left: calc(14px + env(safe-area-inset-left));
+}
+
+#photo {
+  --w: clamp(120px, 24vmin, 210px);
+  position: fixed;
+  /* beside the binder button */
+  left: calc(14px + env(safe-area-inset-left) + 64px + 16px);
+  top: calc(16px + env(safe-area-inset-top));
+  width: var(--w);
+  padding: calc(var(--w) * 0.04);
+  background: #fff;
+  border: calc(var(--stroke) * 0.8) solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 0 6px 0 rgb(40 20 5 / 0.9);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-20%) rotate(-4deg) scale(0.8);
+  transition: opacity 180ms ease-out, transform 280ms var(--pop);
+}
+
+#photo.show {
+  opacity: 1;
+  transform: rotate(-4deg);
+}
+
+#photo img {
+  display: block;
+  width: 100%;
+  border-radius: 5px;
+}
+
+/* ───────── screens ───────── */
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 4vh, 40px);
+  padding: 24px;
+  text-align: center;
+}
+
+#title {
+  background: radial-gradient(ellipse at center, rgb(20 60 40 / 0) 30%, rgb(20 60 40 / 0.45) 100%);
+}
+
+#title .logo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(84vw, 720px);
+  max-height: 56vh;
+  filter: drop-shadow(0 clamp(6px, 1.2vmin, 10px) 0 rgb(40 20 5 / 0.35));
+  animation: logo-in 0.7s var(--pop) both;
+}
+
+@keyframes logo-in {
+  from { transform: rotate(-8deg) scale(0.4); opacity: 0; }
+}
+
+#settings {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top));
+  right: calc(14px + env(safe-area-inset-right));
+}
+
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: #2f7a3a;
+  transition: opacity 400ms ease;
+}
+
+#loading.done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#loading span {
+  width: 72px;
+  height: 72px;
+  border: 10px solid rgb(255 255 255 / 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(1turn); }
+}
+
+/* a bright sunburst behind the review */
+.sunny {
+  overflow: hidden;
+  background: #ffcf4a;
+}
+
+.sunny::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 240vmax;
+  height: 240vmax;
+  margin: -120vmax;
+  background: repeating-conic-gradient(#ffd965 0 9deg, #ffc533 9deg 18deg);
+  animation: spin 90s linear infinite;
+}
+
+.sunny > * {
+  position: relative;
+}
+
+/* ───────── review ───────── */
+#review {
+  gap: clamp(8px, 2.2vh, 22px);
+}
+
+#review .dots {
+  display: flex;
+  gap: 10px;
+}
+
+#review .dots i {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: calc(var(--stroke) * 0.8) solid var(--ink);
+  background: #fff;
+}
+
+#review .dots i.done {
+  background: var(--go);
+}
+
+#review .table {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(16px, 5vw, 60px);
+}
+
+#review .shot {
+  gap: 1.5vh;
+  animation: deal 420ms var(--pop) backwards;
+  transition: transform 200ms var(--ease-out), opacity 300ms ease;
+}
+
+#review .print {
+  --w: min(58vw, 44vh * var(--ar));
+  border: var(--stroke) solid var(--ink);
+  box-shadow: 0 8px 0 rgb(40 20 5 / 0.9);
+}
+
+#review .choose .print {
+  --w: min(40vw, 40vh * var(--ar));
+}
+
+#review .choose .shot {
+  cursor: pointer;
+}
+
+#review .choose .shot:nth-child(1) { rotate: -2.5deg; }
+#review .choose .shot:nth-child(2) { rotate: 2deg; }
+
+#review .stars {
+  height: clamp(30px, 6.5vh, 54px);
+  gap: 8px;
+}
+
+#review .stars svg {
+  width: auto;
+  height: 100%;
+}
+
+#review .shot.kept {
+  transform: scale(1.05);
+}
+
+#review .shot.kept .print {
+  border-color: var(--go-dark);
+  box-shadow: 0 0 0 6px var(--go), 0 8px 0 rgb(40 20 5 / 0.9);
+}
+
+#review .shot.binned {
+  opacity: 0;
+  transform: translateY(40%) rotate(14deg) scale(0.7);
+}
+
+@keyframes deal {
+  from { opacity: 0; transform: translateY(18%) rotate(6deg) scale(0.85); }
+}
+
+.tag {
+  padding: 2px 16px 5px;
+  border: calc(var(--stroke) * 0.8) solid var(--ink);
+  border-radius: 999px;
+  background: var(--cream);
+  font-size: clamp(16px, 3vmin, 22px);
+  font-weight: 600;
+  box-shadow: 0 4px 0 rgb(40 20 5 / 0.9);
+}
+
+.badge-new {
+  position: absolute;
+  right: -5%;
+  top: -9%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: clamp(72px, 16vmin, 120px);
+  aspect-ratio: 1;
+  rotate: 12deg;
+  font-size: clamp(20px, 4.4vmin, 34px);
+  font-weight: 700;
+  color: #fff;
+  -webkit-text-stroke: clamp(3.5px, 0.9vmin, 6px) var(--ink);
+  paint-order: stroke fill;
+  animation: star-in 420ms var(--pop) 450ms backwards;
+}
+
+.badge-new::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--red);
+  clip-path: polygon(50% 0, 61% 12%, 75% 7%, 79% 21%, 93% 25%, 88% 39%, 100% 50%, 88% 61%, 93% 75%, 79% 79%, 75% 93%, 61% 88%, 50% 100%, 39% 88%, 25% 93%, 21% 79%, 7% 75%, 12% 61%, 0 50%, 12% 39%, 7% 25%, 21% 21%, 25% 7%, 39% 12%);
+  filter: drop-shadow(0 4px 0 rgb(40 20 5 / 0.9));
+}
+
+#review .others {
+  display: flex;
+  gap: 12px;
+}
+
+#review .others img {
+  height: clamp(44px, 10vh, 84px);
+  border: calc(var(--stroke) * 0.8) solid var(--ink);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 4px 0 rgb(40 20 5 / 0.9);
+  opacity: 0.75;
+}
+
+#review .others img.on {
+  opacity: 1;
+  border-color: var(--sun-dark);
+  box-shadow: 0 0 0 4px var(--yellow), 0 4px 0 rgb(40 20 5 / 0.9);
+}
+
+/* ───────── overlays and panels (pause, settings) ───────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgb(22 54 40 / 0.55);
+  animation: fade 0.2s ease-out both;
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+}
+
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  max-width: min(760px, 100%);
+  max-height: 100%;
+  padding: clamp(18px, 4vmin, 34px);
+  background: linear-gradient(var(--cream), var(--cream-2));
+  border: calc(var(--stroke) * 1.4) solid var(--ink);
+  border-radius: 40px;
+  box-shadow:
+    inset 0 -12px 0 #edc67e,
+    0 12px 0 rgb(40 20 5 / 0.85);
+  animation: panel-in 0.4s var(--pop) both;
+}
+
+@keyframes panel-in {
+  from { transform: scale(0.6) translateY(40px); opacity: 0; }
+}
+
+.menu {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* a menu too tall for the screen may be scrolled up and down, and nothing else */
+.menu,
+.menu * {
+  touch-action: pan-y;
+}
+
+.menu > * {
+  flex-shrink: 0;
+}
+
+.menu .btn {
+  width: 100%;
+  min-width: min(290px, 70vw);
+}
+
+/* Short landscape screens, such as a phone on its side: the buttons go three-up, and everything is a little
+   smaller, so that the whole menu fits without scrolling. */
+@media (max-height: 620px) and (min-width: 600px) {
+  .panel.menu {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    justify-items: stretch;
+    gap: 10px 12px;
+    padding: 14px 18px 22px;
+    border-radius: 32px;
+  }
+
+  .menu .heading {
+    grid-column: 1 / -1;
+    font-size: clamp(24px, 8vh, 38px);
+  }
+
+  .menu .btn {
+    min-width: min(210px, 27vw);
+    min-height: clamp(44px, 14vh, 60px);
+    padding: 0 12px 4px;
+    gap: 8px;
+    font-size: clamp(16px, 5.4vh, 22px);
+    border-radius: 20px;
+    box-shadow:
+      inset 0 -7px 0 var(--edge),
+      inset 0 4px 0 rgb(255 255 255 / 0.4),
+      0 5px 0 rgb(40 20 5 / 0.9);
+  }
+}
+
+/* ───────── the binder: a real book, with a cover, a stats page and photo pages that turn ───────── */
+#binder {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  /* Strokes inside the book are a share of the page's width, like its text, so they thin down with the book on a
+     small screen. --line is the standard outline: 3px on a page 525px wide. */
+  --line: max(1px, calc(var(--pw) * 0.0062));
+  --shadow: 0 16px 30px rgb(10 30 18 / 0.5);
+}
+
+/* behind the book: the level's own picture, blurred and washed with its colour */
+.binder-shade {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #1f6a3a;
+  animation: fade 0.3s;
+}
+
+.binder-shade::before {
+  content: '';
+  position: absolute;
+  inset: -40px;
+  background: var(--card) center / cover;
+  filter: blur(14px);
+}
+
+.binder-shade::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--wash);
+}
+
+.book {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: calc(var(--pw) * 2);
+  height: var(--ph);
+  margin: calc(var(--ph) * -0.5) 0 0 calc(var(--pw) * -1);
+  perspective: 2800px;
+  transition: transform 0.7s cubic-bezier(0.45, 0, 0.2, 1);
+  touch-action: none;
+}
+
+.book.closed {
+  transform: translateX(calc(var(--pw) * -0.5));
+}
+
+.page,
+.leaf {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+}
+
+.page.left,
+.leaf.from-left {
+  left: 0;
+}
+
+.page.right,
+.leaf.from-right {
+  left: 50%;
+}
+
+.leaf {
+  z-index: 5;
+  transform-style: preserve-3d;
+}
+
+.leaf.from-right {
+  transform-origin: 0 50%;
+}
+
+.leaf.from-left {
+  transform-origin: 100% 50%;
+}
+
+.leaf-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.leaf-back {
+  transform: rotateY(180deg);
+}
+
+.side {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.page.right .side,
+.from-right .leaf-front .side,
+.from-left .leaf-back .side {
+  border-radius: 4px 18px 18px 4px;
+}
+
+.page.left .side,
+.from-right .leaf-back .side,
+.from-left .leaf-front .side {
+  border-radius: 18px 4px 4px 18px;
+}
+
+/* the shadow that falls into the gutter between the two pages */
+.side::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.page.right .side::after,
+.from-right .leaf-front .side::after,
+.from-left .leaf-back .side::after {
+  background: linear-gradient(90deg, rgb(0 0 0 / 0.42), transparent 8%);
+}
+
+.page.left .side::after,
+.from-right .leaf-back .side::after,
+.from-left .leaf-front .side::after {
+  background: linear-gradient(-90deg, rgb(0 0 0 / 0.42), transparent 8%);
+}
+
+/* the front cover: canvas and leather, with the game's logo and the level's name */
+.cover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5%;
+  background: url('/art/ui/cover.webp') center / 100% 100%;
+}
+
+.cover img {
+  width: 72%;
+  filter: drop-shadow(0 6px 0 rgb(20 14 6 / 0.45));
+}
+
+.cover-name {
+  padding: 1.5% 7% 2.6%;
+  border: calc(var(--line) * 1.35) solid var(--ink);
+  border-radius: calc(var(--pw) * 0.027);
+  background: var(--cream);
+  outline: calc(var(--line) * 0.65) dashed rgb(59 36 20 / 0.45);
+  outline-offset: calc(var(--line) * -3);
+  box-shadow: 0 calc(var(--line) * 1.7) 0 rgb(20 14 6 / 0.6);
+  font-size: calc(var(--pw) * 0.075);
+  font-weight: 700;
+  rotate: -2deg;
+}
+
+.cover-name small {
+  display: block;
+  font-size: 0.5em;
+  font-weight: 600;
+  opacity: 0.7;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* inside the front cover: how the collection is going */
+.inside {
+  background: var(--paper, linear-gradient(var(--cream), var(--cream-2)));
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.4%;
+  padding: 5% 8%;
+  text-align: center;
+  font-size: calc(var(--pw) * 0.042);
+}
+
+/* the level's picture across the top of the stats page, with its name */
+.info-level {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 2.5;
+  padding-bottom: 2.5%;
+  border: var(--line) solid var(--ink);
+  border-radius: calc(var(--pw) * 0.04);
+  background: center 35% / cover;
+  box-shadow: 0 calc(var(--line) * 1.5) 0 rgb(40 20 5 / 0.25);
+}
+
+.info-level b {
+  font-size: 1.9em;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: calc(var(--line) * 2.2) var(--ink);
+  paint-order: stroke fill;
+}
+
+.info-done {
+  font-size: 1.25em;
+  font-weight: 700;
+  color: var(--sun-dark);
+}
+
+.info-count {
+  font-weight: 600;
+}
+
+.info-count b {
+  font-size: 2.3em;
+  font-weight: 700;
+  color: var(--go-dark);
+}
+
+.info-bar {
+  width: 82%;
+  height: calc(var(--pw) * 0.04);
+  border: var(--line) solid var(--ink);
+  border-radius: 99px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.info-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(var(--go), var(--go-dark));
+}
+
+.info-chips {
+  display: flex;
+  gap: 4%;
+  justify-content: center;
+  width: 100%;
+}
+
+.info-chips span {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.15em 0.8em 0.3em;
+  border: var(--line) solid var(--ink);
+  border-radius: 99px;
+  background: #fff;
+  font-weight: 600;
+}
+
+.info-chips svg {
+  width: 1.1em;
+  height: 1.1em;
+  stroke-width: 2.8;
+}
+
+.info-chips .gold svg {
+  fill: var(--yellow);
+}
+
+.info ul {
+  width: 92%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  columns: 2;
+  column-gap: 6%;
+  font-size: 0.8em;
+  font-weight: 500;
+  text-align: left;
+}
+
+.info li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0.22em 0;
+  border-bottom: calc(var(--line) * 0.65) solid rgb(59 36 20 / 0.12);
+  break-inside: avoid;
+}
+
+.info li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pips {
+  display: flex;
+  flex: none;
+  gap: 0.22em;
+}
+
+.pips i {
+  width: 0.72em;
+  height: 0.72em;
+  border-radius: 50%;
+  border: calc(var(--line) * 0.65) solid var(--ink);
+  background: #fff;
+}
+
+.pips i.on {
+  background: var(--go);
+}
+
+.reset {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1%;
+  /* the same space on every side of the words */
+  padding: 0.5em 1.3em;
+  border: var(--line) solid var(--ink);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.8em;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* the bar that fills while the button is held, and drops back at once if it is let go */
+.reset i {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  background: var(--red);
+  transition: width 0.2s;
+}
+
+.reset.holding i {
+  width: 100%;
+  transition: width var(--hold) linear;
+}
+
+.reset span {
+  position: relative;
+}
+
+/* a quiet line of help above the open binder */
+.book-tip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* just above the top edge of the book */
+  top: calc(46% - var(--ph) / 2 - 2.4em);
+  text-align: center;
+  font-weight: 500;
+  font-size: clamp(14px, 1.7vw, 18px);
+  letter-spacing: 0.02em;
+  color: rgb(255 255 255 / 0.8);
+  text-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+  pointer-events: none;
+}
+
+/* leaving: the controls go at once, the backdrop fades as the binder drops away */
+#binder.leaving .book-nav,
+#binder.leaving .book-actions,
+#binder.leaving .book-tip {
+  display: none;
+}
+
+#binder.leaving .binder-shade {
+  opacity: 0;
+  transition: opacity 0.3s ease 0.4s;
+}
+
+/* In the binder the stars are simply there. (A page is built once for the turning leaf and again where it
+   lands, so an entrance animation would play twice.) */
+#binder .stars svg.lit {
+  animation: none;
+}
+
+/* a page of photo pockets: one dinosaur, four poses */
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 3%;
+  padding: 4.5% 6%;
+  background: var(--sheet, linear-gradient(160deg, #2c3f33, #1a281f));
+  color: var(--cream);
+}
+
+.sheet header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: calc(var(--pw) * 0.058);
+  font-weight: 700;
+}
+
+.sheet header button {
+  background: none;
+  font-weight: 700;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet header .pips i {
+  border-color: rgb(255 247 227 / 0.8);
+  background: transparent;
+}
+
+.sheet header .pips i.on {
+  background: var(--go);
+}
+
+.sheet .grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4%;
+}
+
+/* A pocket is always the same size, whatever is in it; a photo is shrunk to fit inside, never the other way round. */
+.pocket {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  container-type: size;
+  border-radius: 8px;
+  background: rgb(0 0 0 / 0.16);
+  cursor: pointer;
+}
+
+/* the clear plastic sleeve over each pocket */
+.pocket::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 8px;
+  background: linear-gradient(125deg, rgb(255 255 255 / 0.16), transparent 28%, transparent 72%, rgb(255 255 255 / 0.07));
+  pointer-events: none;
+}
+
+.pocket .shot {
+  gap: 4cqh;
+  rotate: var(--tilt, 0deg);
+}
+
+.pocket .print {
+  --w: min(88cqw, 66cqh * var(--ar));
+  /* a small, tight shadow: the print lies on the page */
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.45);
+}
+
+.pocket .stars {
+  height: 14cqh;
+}
+
+.pocket .stars svg {
+  width: auto;
+  height: 100%;
+  stroke: rgb(0 0 0 / 0.55);
+}
+
+.pocket.new .print {
+  box-shadow: 0 0 0 var(--line) var(--yellow), 0 1px 2px rgb(0 0 0 / 0.45);
+}
+
+/* an empty pocket shows the pose to find as a pale shape: plainly not a photo */
+.pocket.missing {
+  border: calc(var(--line) * 0.65) dashed rgb(255 255 255 / 0.22);
+  background: none;
+  cursor: default;
+}
+
+.pocket.missing::after {
+  display: none;
+}
+
+.pocket .shape {
+  width: 72cqw;
+  height: 72cqh;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  opacity: 0.16;
+}
+
+.pocket .hint {
+  position: absolute;
+  right: 5%;
+  bottom: 6%;
+  display: grid;
+  place-items: center;
+  width: 24cqmin;
+  height: 24cqmin;
+  padding: 3cqmin;
+  border: var(--line) solid var(--ink);
+  border-radius: 50%;
+  background: var(--cream);
+  object-fit: contain;
+}
+
+.pocket .hint svg {
+  width: 100%;
+  height: 100%;
+  fill: var(--yellow);
+  stroke: var(--ink);
+  stroke-width: 2.6;
+}
+
+.book-nav {
+  position: absolute;
+  z-index: 6;
+  top: calc(46% - 34px);
+}
+
+/* the page-turn buttons can be hit from well outside their edge */
+.book-nav::before {
+  content: '';
+  position: absolute;
+  inset: -22px;
+  border-radius: 50%;
+}
+
+.book-prev {
+  left: max(8px, calc(50% - var(--pw) - 84px));
+}
+
+.book-next {
+  right: max(8px, calc(50% - var(--pw) - 84px));
+}
+
+.book-actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(2.2vh + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.book-actions .btn {
+  min-height: clamp(48px, 9vh, 68px);
+  font-size: clamp(20px, 3.6vh, 28px);
+}
+
+/* ───────── a closer look at the photos ───────── */
+#viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+}
+
+.viewer-shade {
+  position: absolute;
+  inset: 0;
+  background: rgb(12 34 22);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+#viewer.dark .viewer-shade {
+  opacity: 0.9;
+}
+
+/* the dinosaur's name, small, above the photo in the middle */
+.viewer-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(3vh + env(safe-area-inset-top));
+  text-align: center;
+  font-size: clamp(16px, 2.6vh, 24px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgb(255 255 255 / 0.9);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+#viewer.dark .viewer-name {
+  opacity: 1;
+}
+
+.shot.viewed {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  gap: 2vh;
+  transform-origin: 0 0;
+  cursor: pointer;
+  will-change: transform;
+}
+
+.shot.viewed .print {
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
+}
+
+.shot.viewed .stars {
+  height: clamp(30px, 6.5vh, 54px);
+  gap: 8px;
+  transition: opacity 0.25s ease;
+}
+
+.shot.viewed .stars svg {
+  width: auto;
+  height: 100%;
+  animation: none;
+}
+
+/* On its way out of or back into its pocket, and at the sides, a photo shows no stars. They go at once and
+   only fade when coming back, so they are never seen trailing under a moving photo. */
+.shot.viewed.lifting .stars,
+.shot.viewed.beside .stars {
+  opacity: 0;
+  transition: none;
+}
+
+.shot.viewed.beside {
+  z-index: 1;
+  filter: brightness(0.5);
+}
+
+/* the logo, on its way from the binder's cover to the title screen */
+.logo-fly {
+  position: fixed;
+  z-index: 3;
+  transform-origin: 0 0;
+  filter: drop-shadow(0 clamp(6px, 1.2vmin, 10px) 0 rgb(40 20 5 / 0.35));
+  pointer-events: none;
+}
+
+#title.no-intro .logo {
+  animation: none;
+}
+
+#title.logo-away .logo {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-huge,
+  .orb.pulse,
+  .sunny::before {
+    animation: none;
+  }
+}
+
+/* ───────── choosing a level ───────── */
+.panel.levels {
+  width: min(920px, 100%);
+}
+
+.level-close {
+  position: absolute;
+  top: -18px;
+  right: -18px;
+  width: 52px;
+  min-height: 52px;
+  height: 52px;
+  font-size: 24px;
+}
+
+.level-row {
+  display: flex;
+  gap: clamp(12px, 3vw, 28px);
+  width: 100%;
+  justify-content: center;
+}
+
+.level-card {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+  min-width: 0;
+  aspect-ratio: 4 / 3;
+  max-height: 52vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 8px 12px;
+  overflow: hidden;
+  border: var(--stroke) solid var(--ink);
+  border-radius: 26px;
+  background: var(--sky) center / cover;
+  box-shadow: 0 7px 0 rgb(40 20 5 / 0.9);
+  transition: transform 0.12s var(--ease-out), box-shadow 0.12s var(--ease-out);
+}
+
+.level-card:active {
+  transform: translateY(5px) scale(0.98);
+  box-shadow: 0 2px 0 rgb(40 20 5 / 0.9);
+}
+
+/* a soft shade under the name and the count, so they read over any picture */
+.level-card::before {
+  content: '';
+  position: absolute;
+  inset: 45% 0 0;
+  background: linear-gradient(transparent, rgb(40 20 5 / 0.6));
+}
+
+.level-name {
+  position: relative;
+  font-size: clamp(18px, 4.6vmin, 32px);
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  -webkit-text-stroke: clamp(4px, 1vmin, 7px) var(--ink);
+  paint-order: stroke fill;
+}
+
+.level-count {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 12px 3px;
+  border: calc(var(--stroke) * 0.6) solid var(--ink);
+  border-radius: 999px;
+  background: var(--cream);
+  font-size: clamp(13px, 2.8vmin, 18px);
+  font-weight: 600;
+}
+
+.level-count svg {
+  width: 1.1em;
+  height: 1.1em;
+  stroke-width: 2.6;
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dino Safari</string>
+    <string name="title_activity_main">Dino Safari</string>
+    <string name="package_name">com.scott1up.dinosafari</string>
+    <string name="custom_url_scheme">com.scott1up.dinosafari</string>
+</resources>
