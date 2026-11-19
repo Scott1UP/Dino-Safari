@@ -130,16 +130,27 @@ if (existsSync(res)) {
   }
 }
 
-// The link preview, kept simple: the two levels' pictures side by side, dimmed, with the logo over them.
+// The link preview, kept simple: the two levels' pictures, dimmed, with the logo over them. The pictures are
+// sliced along the diagonal from the bottom left corner to the top right: the Jungle Trail above the cut, the
+// Volcano Mine below it, with a pale line along the cut.
 const OG_W = 1200;
 const OG_H = 630;
-const halves = ['ui/card-level-1', 'ui/card-level-2'];
+const slice = async (id, corners) => {
+  const cut = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${OG_W}" height="${OG_H}"><polygon points="${corners}" fill="#fff"/></svg>`);
+  return sharp(await sharp(art(id)).resize(OG_W, OG_H, { fit: 'cover' }).ensureAlpha().png().toBuffer())
+    .composite([{ input: cut, blend: 'dest-in' }])
+    .png()
+    .toBuffer();
+};
+const seam = Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_W}" height="${OG_H}"><line x1="0" y1="${OG_H}" x2="${OG_W}" y2="0" stroke="#fff7e3" stroke-width="8"/></svg>`,
+);
 const backdrop = await sharp({ create: { width: OG_W, height: OG_H, channels: 3, background: '#1d4a2b' } })
-  .composite(
-    await Promise.all(
-      halves.map(async (id, i) => ({ input: await sharp(art(id)).resize(OG_W / 2, OG_H, { fit: 'cover' }).toBuffer(), left: (i * OG_W) / 2, top: 0 })),
-    ),
-  )
+  .composite([
+    { input: await slice('ui/card-level-1', `0,0 ${OG_W},0 0,${OG_H}`) },
+    { input: await slice('ui/card-level-2', `${OG_W},0 ${OG_W},${OG_H} 0,${OG_H}`) },
+    { input: seam },
+  ])
   .png()
   .toBuffer();
 const dim = Buffer.from(
