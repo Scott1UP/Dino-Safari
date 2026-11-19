@@ -335,10 +335,11 @@ $('play').addEventListener('click', async () => {
   await goTo(def);
   loading.classList.add('done');
   sound('tap');
+  music(true, 1, true); // the ride begins with the music at its beginning
   startRide();
 });
 $('open-binder').addEventListener('click', async () => {
-  void unlockAudio().then(() => music(true, 0.6));
+  void unlockAudio();
   const def = await choose('Which binder?');
   if (def) void showBinder(def);
 });
@@ -425,3 +426,10 @@ requestAnimationFrame(tick);
 
 title.hidden = false;
 loading.classList.add('done');
+
+// --- the ride music plays on the title screen too. A browser may hold all sound back until the first touch,
+// so every touch asks again; the music starts by itself the moment it is allowed.
+music(true, 0.6);
+const wake = () => void unlockAudio();
+wake();
+for (const type of ['pointerdown', 'touchend', 'click', 'keydown']) document.addEventListener(type, wake, { capture: true });
