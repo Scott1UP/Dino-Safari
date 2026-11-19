@@ -35,6 +35,7 @@ export let muted = localStorage.getItem(MUTE_KEY) === '1';
 
 export let musicOn = localStorage.getItem(MUSIC_KEY) !== '1';
 let musicWanted: number | undefined;
+let loaded: Promise<unknown> | undefined;
 
 export function setMusicOn(value: boolean) {
   musicOn = value;
@@ -64,14 +65,23 @@ async function load(kind: string, id: string) {
   }
 }
 
-/** Browsers only allow sound after a touch: call this from the first tap. */
+/**
+ * Browsers only allow sound after a touch: call this from a tap. It can be called before one too, to have the
+ * sounds loaded and waiting. Resolves once sound is allowed and everything has loaded.
+ */
 export function unlockAudio(): Promise<unknown> {
-  if (context) return context.resume();
-  context = new AudioContext();
-  master = context.createGain();
+  if (context) return context.resume().then(() => loaded);
+  const made = (context = new AudioContext());
+  master = made.createGain();
   master.gain.value = muted ? 0 : 1;
-  master.connect(context.destination);
-  return Promise.all([...SFX.map((id) => load('sfx', id)), ...VOICE.map((id) => load('voice', id)), load('music', 'ride')]);
+  master.connect(made.destination);
+  // music that was asked for too soon starts as soon as it can: once sound is allowed, and once it has loaded
+  const startMusic = () => {
+    if (musicWanted !== undefined) music(true, musicWanted);
+  };
+  made.addEventListener('statechange', startMusic);
+  loaded = Promise.all([...SFX.map((id) => load('sfx', id)), ...VOICE.map((id) => load('voice', id)), load('music', 'ride').then(startMusic)]);
+  return made.state === 'running' ? loaded : made.resume().then(() => loaded);
 }
 
 function start(key: string, volume: number, loop = false, rate = 1, delay = 0) {
@@ -156,9 +166,9 @@ export function ambience(id: string, on: boolean) {
 
 /**
  * The ride music, round and round. The piece is not cut as a perfect loop, so each pass fades out over its
- * last two seconds while the next fades in over them.
+ * last two seconds while the next fades in over them. `restart` begins the piece again from its beginning.
  */
-export function music(on: boolean, level = 1) {
+export function music(on: boolean, level = 1, restart = false) {
   musicWanted = on ? level : undefined;
   if (!context) return;
   if (!musicOn) on = false;
@@ -168,6 +178,17 @@ export function music(on: boolean, level = 1) {
     musicGain?.gain.linearRampToValueAtTime(0, context.currentTime + 1);
     musicGain = undefined;
     return;
+  }
+  // not allowed to sound yet, or not loaded yet: it starts when it is (see unlockAudio)
+  if (context.state !== 'running' || !buffers.has('music/ride')) return;
+  if (musicGain && restart) {
+    // the pass that is playing fades away quickly under the new beginning
+    clearTimeout(musicTimer);
+    const old = musicGain;
+    old.gain.setValueAtTime(old.gain.value, context.currentTime);
+    old.gain.linearRampToValueAtTime(0, context.currentTime + 0.4);
+    window.setTimeout(() => old.disconnect(), 600);
+    musicGain = undefined;
   }
   if (musicGain) {
     musicGain.gain.linearRampToValueAtTime(level, context.currentTime + 0.8);

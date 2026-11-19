@@ -33,6 +33,7 @@ const FPS_KEY = 'dino-safari:fps-viewer';
 const RIDES_KEY = 'dino-safari:rides';
 const LEVEL_KEY = 'dino-safari:level';
 const SLOW_KEY = 'dino-safari:slow-ride';
+const AUTO_FOCUS_KEY = 'dino-safari:auto-focus';
 
 type Mode = 'title' | 'ride' | 'paused' | 'away';
 let mode: Mode = 'title';
@@ -58,6 +59,7 @@ let ambient: Ambient;
 let interactions: Interactions;
 let ride: Ride;
 let slowRide = localStorage.getItem(SLOW_KEY) === '1';
+let autoFocus = localStorage.getItem(AUTO_FOCUS_KEY) === '1';
 
 async function enterLevel(def: LevelDef) {
   // let go of the level being left
@@ -90,6 +92,7 @@ async function enterLevel(def: LevelDef) {
   interactions = await Interactions.create(scene, actors);
   ride = new Ride();
   ride.slow = slowRide;
+  ride.autoFocus = autoFocus;
   ride.parked = true;
   setGraphics(graphics);
 }
@@ -266,6 +269,11 @@ async function pause() {
       slowRide = ride.slow = on;
       localStorage.setItem(SLOW_KEY, on ? '1' : '0');
     },
+    autoFocus: () => autoFocus,
+    setAutoFocus(on) {
+      autoFocus = ride.autoFocus = on;
+      localStorage.setItem(AUTO_FOCUS_KEY, on ? '1' : '0');
+    },
     graphics: () => graphics,
     setGraphics,
     fpsViewer: () => !fpsCounter.hidden,
@@ -283,9 +291,10 @@ async function pause() {
 let lastZoomSound = 0;
 setupHud({
   look(dx, dy, viewHeight) {
-    // the scene follows the finger exactly, however far the lens is zoomed
+    // the view turns the way the finger goes (swipe up to look up, right to look right), by as much as the
+    // finger crosses of the screen, however far the lens is zoomed
     const step = THREE.MathUtils.degToRad(camera.fov) / viewHeight;
-    ride.drag(dx * step, dy * step);
+    ride.turn(dx * step, -dy * step);
   },
   zoom(factor) {
     const before = ride.zoom;
@@ -334,10 +343,11 @@ $('play').addEventListener('click', async () => {
   await goTo(def);
   loading.classList.add('done');
   sound('tap');
+  music(true, 1, true); // the ride begins with the music at its beginning
   startRide();
 });
 $('open-binder').addEventListener('click', async () => {
-  void unlockAudio().then(() => music(true, 0.6));
+  void unlockAudio();
   const def = await choose('Which binder?');
   if (def) void showBinder(def);
 });
@@ -424,3 +434,10 @@ requestAnimationFrame(tick);
 
 title.hidden = false;
 loading.classList.add('done');
+
+// --- the ride music plays on the title screen too. A browser may hold all sound back until the first touch,
+// so every touch asks again; the music starts by itself the moment it is allowed.
+music(true, 0.6);
+const wake = () => void unlockAudio();
+wake();
+for (const type of ['pointerdown', 'touchend', 'click', 'keydown']) document.addEventListener(type, wake, { capture: true });
